@@ -5,39 +5,41 @@ import Avatar from '@material-ui/core/Avatar'
 import { db } from '../firebase';
 import firebase from 'firebase'
 
-function Post({ username, caption, imageUrl, postId, user }) {
+function Post({ username, caption, imageUrl, postID, user }) {
     const [comments, setComments] = useState([]);
     const [comment, setComment] = useState('');
-
-    // To get the comments
-    useEffect(() => {
-        let unsubscribe;
-        if (postId) {
-            unsubscribe = db
-                .collection('posts')
-                .doc(postId)
-                .collection('comments')
-                .orderBy('timestamp', 'desc')
-                .onSnapshot((snapshot) => {
-                    setComments(snapshot.docs.map((doc) => doc.data()));
-                })
-        }
-        return () => {
-            unsubscribe();
-        }
-    }, [postId])
 
     const postComment = (event) => {
         event.preventDefault();
 
-        db
-            .collection('posts').doc('postId').collection('comments').add({
+        db.collection('posts')
+            .doc(postID)
+            .collection('comments')
+            .add({
                 text: comment,
                 username: user.displayName,
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
-            })
+            });
         setComment('');
     }
+
+    // To get the comments
+    useEffect(() => {
+        let unsubscribe;
+        if (postID) {
+            unsubscribe = db
+                .collection('posts')
+                .doc(postID)
+                .collection('comments')
+                .orderBy('timestamp', 'desc')
+                .onSnapshot((snapshot) => {
+                    setComments(snapshot.docs.map((doc) => doc.data()));
+                });
+        }
+        return () => {
+            unsubscribe();
+        }
+    }, [postID])
 
     return (
         <PostDiv>
@@ -52,32 +54,35 @@ function Post({ username, caption, imageUrl, postId, user }) {
             <img src={imageUrl} />
             <h4><strong>{username}</strong> {caption}</h4>
 
-            {/* Post the comments */}
             <div className="post__comments">
                 {comments.map((comment) => (
                     <p>
-                        <strong>{comment.username}</strong> {comment.text}
+                        <strong>{comment.username}:</strong> {comment.text}
                     </p>
                 ))}
             </div>
 
-            <form>
-                <input
-                    className='post__input'
-                    type="text"
-                    placeholder='Add a comment'
-                    value={comment}
-                    onChange={(e) => setComment(e.target.value)}
-                />
-                <button
-                    className='post__button'
-                    disabled={!comment}
-                    type='submit'
-                    onClick={postComment}
-                >
-                    Post
-                </button>
-            </form>
+            {/* Post the comments */}
+            {/* The user && is for if the user is not logged in  the comment box disappears*/}
+            {user && (
+                <form>
+                    <input
+                        type="text"
+                        value={comment}
+                        placeholder='Add a comment...'
+                        className="post__input"
+                        onChange={(e) => setComment(e.target.value)} />
+
+                    <button
+                        disabled={!comment}
+                        className="post__button"
+                        type="submit"
+                        onClick={postComment}
+                    >
+                        Post
+            </button>
+                </form>
+            )}
         </PostDiv>
     )
 }
@@ -91,13 +96,17 @@ const PostDiv = styled.div`
     margin-bottom: 45px;
     & > div {
         display: flex;
-        align-items: center;
         padding: 20px;
         & > h3 {
         margin-left: 10px;
         }
         &.post__comments {
+            display: flex;
+            flex-direction: column;
             padding: 20px;
+            & > p {
+                margin-top: 10px;
+            }
         }
     }
     & > img {
@@ -113,11 +122,11 @@ const PostDiv = styled.div`
     }
     & > form {
         display: flex;
-        margin-top: 20px;
+        margin-top: 10px;
         & > input {
             flex: 1;
             border: none;
-            padding: 10px;
+            padding: 20px;
             border-top: 1px solid lightgray;
         }
         & > button {
